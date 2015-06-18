@@ -107,7 +107,7 @@ class Trace(object):
 
 
 if __name__ == "__main__":
-    path = "G:\Temp\\traceData\AllData"
+    path = "/home/chenzhi/Downloads/operationTables5"
     traces = {}
     with open(path, "r") as f:
         lines = f.readlines()
@@ -123,6 +123,6 @@ if __name__ == "__main__":
 
     for trace_id in traces:
         traces[trace_id].correct_depth()
-        # print trace_id, traces[trace_id][0]
-    print traces["6201970502416728064"].print_call_stack()
+        print traces[trace_id].print_call_stack()
+
 

@@ -7,10 +7,12 @@ import jieba.analyse
 from gensim import corpora, models, similarities
 
 
-STOP_WORDS_PATH = "/home/chenzhi/Documents/SogouC.reduced/stop_words"
+STOP_WORDS_PATH = "G:\\Temp\\SogouC.reduced\\stop_words_sogou_reduced"
+STOP_WORDS_MAP = {}
 with open(STOP_WORDS_PATH, "r") as f:
     STOP_WORDS = f.readlines()
-STOP_WORDS = [word.decode("utf-8").replace("\n", "") for word in STOP_WORDS]
+for word in STOP_WORDS:
+    STOP_WORDS_MAP[word.decode("utf-8").replace("\n", "")] = 0
 
 
 def test_encoding():
@@ -22,16 +24,17 @@ def test_encoding():
         print line.decode("GB2312").encode("utf-8")
 
 
-def text_to_vector(f):
-    if isinstance(f, str):
-        f = open(f, "r")
-    text = f.readlines()
-    f.close()
-    text = [line.decode("GB2312").encode("utf-8") for line in text]
-    text = "".join(text).replace("\r\n", "").replace("\t", "")
-    seg_list = jieba.cut(text)
-    seg_list = [seg for seg in seg_list if seg not in STOP_WORDS]
-    return seg_list
+def try_to_decode(path):
+    for file in read_directory(path):
+        with open(file, "r") as f:
+            text = f.readlines()
+        try:
+            text = [line.decode("GB2312").encode("utf-8") for line in text]
+        except Exception as e:
+            try:
+                text = [line.decode("GB18030").encode("utf-8") for line in text]
+            except Exception as e:
+                print file
 
 
 def text_to_vector(text_path):
@@ -43,15 +46,25 @@ def text_to_vector(text_path):
         text = [line.decode("GB18030").encode("utf-8") for line in text]
     text = "".join(text).replace("\r\n", "").replace("\t", "")
     seg_list = jieba.cut(text)
-    seg_list = [seg for seg in seg_list if seg not in STOP_WORDS and seg != u"" and seg != u"\n"]
+    seg_list = [seg for seg in seg_list if seg not in STOP_WORDS_MAP and seg != u"" and seg != "\x00" and seg != u"\n"]
     return seg_list
 
 
 def directory_to_vectors(path):
-    vectors = []
-    for file in read_directory(path):
-        vectors.append(text_to_vector(file))
-    return vectors
+    texts = []
+    for i, file in enumerate(read_directory(path)):
+        texts.append(text_to_vector(file))
+        if i % 10 == 0:
+            print "\tHave parsed %d files." % i
+
+    # remove words only appear once
+    from collections import defaultdict
+    frequency = defaultdict(int)
+    for text in texts:
+        for token in text:
+            frequency[token] += 1
+    texts = [[token for token in text if frequency[token] > 1] for text in texts]
+    return texts
 
 
 def read_directory(root_dir):
@@ -59,41 +72,68 @@ def read_directory(root_dir):
     for root, sub_dirs, files in os.walk(root_dir):
         for file in files:
             all_files.append(os.path.join(root, file))
+    sorted(all_files)
+
+    def save_id_to_filename(path, allfiles):
+        f = open(path, 'w')
+        for id, filename in enumerate(allfiles):
+            f.write(str(id) + " " + filename + "\n")
+        f.close()
+
+    save_id_to_filename("G:\Temp\SogouC.reduced\Reduced\\id_to_filename", all_files)
     return all_files
 
 
-def save_dictionary_and_corpus():
-    vectors = directory_to_vectors("/home/chenzhi/Documents/SogouC.reduced/Sample/Sample")
+def save_dictionary_and_corpus(data_path, save_path):
+    print "Parse text to vector..."
+    vectors = directory_to_vectors(data_path)
+    print "Build dictionary from vector..."
     dictionary = corpora.Dictionary(vectors)
     # vd = dict([(v,k) for (k,v) in dictionary.token2id.items()])
-    dictionary.save_as_text('/home/chenzhi/Documents/SogouC.reduced/Sample/dictionary.txt')
-    print dictionary
-
+    print "Save dictionary to disk..."
+    dictionary.save_as_text(save_path + 'dictionary.txt')
+    # print dictionary
+    print "Build corpus from dictionary..."
     corpus = [dictionary.doc2bow(vector) for vector in vectors]
-    corpora.MmCorpus.serialize('/home/chenzhi/Documents/SogouC.reduced/Sample/corpus.mm', corpus)
-    print corpus
+    print "Save corpus to disk..."
+    corpora.MmCorpus.serialize(save_path + 'corpus.mm', corpus)
+    # print corpus
 
     # print dictionary.token2id
 
 
-
-def main():
+def main(dictionary_path, corpus_path):
     """
     before running main(), please run save_dictionary_and_corpus(), it will prepare data required by main()
     :return:
     """
-    id2word = corpora.Dictionary.load_from_text('/home/chenzhi/Documents/SogouC.reduced/Sample/dictionary.txt')
-    print id2word
-    mm = corpora.MmCorpus('/home/chenzhi/Documents/SogouC.reduced/Sample/corpus.mm')
-    print mm
+    id2word = corpora.Dictionary.load_from_text(dictionary_path)
+    # print id2word
+    corpus = corpora.MmCorpus(corpus_path)
+    # print corpus
+    # calculate TF-IDF
+    tfidf = models.TfidfModel(corpus)
+    corpus_tfidf = tfidf[corpus]
 
-    lsi = models.lsimodel.LsiModel(corpus=mm, id2word=id2word, num_topics=10)
+    lsi = models.lsimodel.LsiModel(corpus=corpus_tfidf, id2word=id2word, num_topics=9)
 
-    topics =  lsi.print_topics(10)
-    print topics
+    # official API to print topics
+    # topics = lsi.print_topics(num_topics=9, num_words=20)
+    # print topics
+
+    def print_topic(n):
+        for i in range(n):
+            print ",".join([str(tu[0]) + "*" + tu[1].encode("utf-8") for tu in lsi.show_topic(i, topn=20)])
+
+    print_topic(10)
+
+    # LDA Model
+    # lda = models.ldamodel.LdaModel(corpus=mm, id2word=id2word, num_topics=100, update_every=1, chunksize=10000, passes=1)
+    # lda.print_topics(20)
 
 if __name__ == "__main__":
     # id2word = corpora.Dictionary.load_from_text('/home/chenzhi/Documents/SogouC.reduced/Sample/dictionary.txt')
     # print(id2word.token2id)
-    # save_dictionary_and_corpus()
-    main()
+    # try_to_decode("G:\\Temp\\SogouC.reduced\\Reduced\\data\\")
+    # save_dictionary_and_corpus("G:\\Temp\\SogouC.reduced\\Reduced\\data\\", "G:\\Temp\\SogouC.reduced\\Reduced\\")
+    main("G:\\Temp\\SogouC.reduced\\Reduced\\dictionary.txt", "G:\\Temp\\SogouC.reduced\\Reduced\\corpus.mm")

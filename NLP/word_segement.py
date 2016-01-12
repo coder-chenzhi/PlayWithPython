@@ -16,7 +16,7 @@ def read_data(path):
 def main():
     topK = 30
     withWeight = True
-    lines = read_data("G:\Personal Affair\DanielLovesLily\ChatLog\Lily(2392781997)-2015.5.10.txt")
+    lines = read_data("G:\Personal Affair\DanielLovesLily\ChatLog\Lily(2392781997)-2015.7.18.txt")
     all_line = u" ".join(lines)
     jieba.analyse.set_stop_words("G:\Personal Affair\DanielLovesLily\ChatLog\stopwords2")
     tags = jieba.analyse.extract_tags(all_line, topK=topK, withWeight=withWeight)

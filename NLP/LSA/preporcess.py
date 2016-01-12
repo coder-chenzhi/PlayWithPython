@@ -51,6 +51,12 @@ def text_to_vector(text_path):
 
 
 def directory_to_vectors(path):
+    """
+    read all the documents in specific path, each document is a article, and return
+    term-document matrix
+    :param path: where the data locate
+    :return: term-document matrix
+    """
     texts = []
     for i, file in enumerate(read_directory(path)):
         texts.append(text_to_vector(file))
@@ -85,6 +91,13 @@ def read_directory(root_dir):
 
 
 def save_dictionary_and_corpus(data_path, save_path):
+    """
+    save corpus and dictionary svd needed, we can readily get the term-document matrix by reading corpus and
+    dictionary, which can save much time by avoiding reread the primary files
+    :param data_path: where the primary data locate
+    :param save_path:where to save the corpus and dictionary
+    :return:
+    """
     print "Parse text to vector..."
     vectors = directory_to_vectors(data_path)
     print "Build dictionary from vector..."
@@ -123,7 +136,8 @@ def main(dictionary_path, corpus_path):
 
     def print_topic(n):
         for i in range(n):
-            print ",".join([str(tu[0]) + "*" + tu[1].encode("utf-8") for tu in lsi.show_topic(i, topn=20)])
+            # print ",".join([str(tu[0]) + "*" + tu[1].encode("utf-8") for tu in lsi.show_topic(i, topn=20)])
+            print ",".join(tu[1].encode("utf-8") for tu in lsi.show_topic(i, topn=20))
 
     print_topic(10)
 

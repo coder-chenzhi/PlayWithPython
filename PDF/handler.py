@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 __author__ = 'chenzhi'
+
 
 from PyPDF2 import PdfFileReader
 import os
@@ -88,8 +90,10 @@ def keyword_count(obj):
 
 
 if __name__ == "__main__":
-    pdf_dir = "G:\KuaiPan\Research\ByConferenceOrJournal\Conference\Cluster\\2015\\"
+    pdf_dir = "F:\\KuaiPan\\Lab\\Fund\\863服务开发包软件\\验收\\成果\\结题成果\\论文"
     all_files = read_directory(pdf_dir)
     all_pdf = [f for f in all_files if f.endswith(".pdf")]
-    keyword_count(all_pdf)
-    # page_count(pdf_dir + "Cluster Tools\ObsCon Integrated Monitoring and Control for.pdf")
+    # keyword_count(all_pdf)
+    for pdf in all_pdf:
+        pdf_file = PdfFileReader(open(pdf, 'rb')).getDocumentInfo()
+        print pdf_file.title
